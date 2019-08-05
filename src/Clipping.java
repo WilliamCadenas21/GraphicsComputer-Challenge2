@@ -26,8 +26,6 @@ public class Clipping extends JPanel {
 
         Graphics2D g2d = (Graphics2D) g;
 
-        g2d.setColor(Color.black);
-
         // size es el tamaÃ±o de la ventana.
         Dimension size = getSize();
         // Insets son los bordes y los tÃ­tulos de la ventana.
@@ -36,6 +34,7 @@ public class Clipping extends JPanel {
         int w = size.width - insets.left - insets.right;
         int h = size.height - insets.top - insets.bottom;
         
+        g2d.setColor(Color.WHITE);
         g2d.drawLine(0, h / 2, w, h / 2);// eje x
         g2d.drawLine(w / 2, 0, w / 2, h);// eje y
         
@@ -47,7 +46,8 @@ public class Clipping extends JPanel {
         boundary[1] = new Point(-x, y);
         boundary[2] = new Point(x, y);
         boundary[3] = new Point(x, -y);
-
+        
+        g2d.setColor(Color.BLACK);
         for (int i = 0; i < 4; i++) {
             drawJava(boundary[i].x, boundary[i].y, boundary[(i + 1) % 4].x, boundary[(i + 1) % 4].y, g2d, w, h); //eje x
         }
@@ -55,13 +55,13 @@ public class Clipping extends JPanel {
         Point[] points = new Point[numberOfPoints];
         //one line
         points[0] = new Point(-150, -150);
-        points[1] = new Point(50, 50);
+        points[1] = new Point(150, 150);
         //second line
-        points[2] = new Point(-50, 150);
-        points[3] = new Point(50, 150);
+        points[2] = new Point(-200, 4);
+        points[3] = new Point(200, 4);
         //tree line
-        points[4] = new Point(110, 50);
-        points[5] = new Point(160, 80);
+        points[4] = new Point(4, 200);
+        points[5] = new Point(-4, -200);
 
         CohenSutherLand(points, boundary, g2d, w, h);
     }
