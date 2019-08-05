@@ -5,14 +5,21 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Point;
+import java.util.Scanner;
 
 import javax.swing.JPanel;
 import javax.swing.JFrame;
 
 public class Clipping extends JPanel {
 
+    private Scanner sc = new Scanner(System.in);
     private final int numberOfPoints = 6;
-    private final double angulo = 10;
+
+    //varaibles privadas con las cuales funciona el algoritmo
+    private double angulo = 0;
+    private final int steps = 1;
+    private int R = 141;
+    private int numRombos = 1;
 
     private static final int INSIDE = 0; //0000
     private static final int LEFT = 1; //0001
@@ -24,6 +31,11 @@ public class Clipping extends JPanel {
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        System.out.println("Bienvenido antes de empezar por favor digite el angulo:");
+        angulo = sc.nextInt();
+        System.out.println("por favor digite el numero de rombos:");
+        numRombos = sc.nextInt();
+
         Graphics2D g2d = (Graphics2D) g;
 
         // size es el tamaÃ±o de la ventana.
@@ -33,11 +45,12 @@ public class Clipping extends JPanel {
 
         int w = size.width - insets.left - insets.right;
         int h = size.height - insets.top - insets.bottom;
-        
+
         g2d.setColor(Color.WHITE);
         g2d.drawLine(0, h / 2, w, h / 2);// eje x
         g2d.drawLine(w / 2, 0, w / 2, h);// eje y
-        
+
+        //clipping Area
         int x = 100;
         int y = 100;
 
@@ -46,24 +59,57 @@ public class Clipping extends JPanel {
         boundary[1] = new Point(-x, y);
         boundary[2] = new Point(x, y);
         boundary[3] = new Point(x, -y);
+
+        //dibujado del primer rombo
+        g2d.setColor(Color.blue);
+        Point[] fRhombus = new Point[4];
+        fRhombus[0] = new Point(R, 0);
+        fRhombus[1] = new Point(0, R);
+        fRhombus[2] = new Point(-R, 0);
+        fRhombus[3] = new Point(0, -R);
         
+        Point[] pair0 = new Point[2];
+        //Dibuja las lineas entre los nuevos puntos
+        for (int k = 0; k < 3; k++) {
+            pair0[0] = fRhombus[k];
+            pair0[1] = fRhombus[k + 1];
+            CohenSutherLand(pair0, boundary, g2d, w, h);
+        }
+        pair0[0] = fRhombus[3];
+        pair0[1] = fRhombus[0];
+        CohenSutherLand(pair0, boundary, g2d, w, h);
+
         g2d.setColor(Color.BLACK);
         for (int i = 0; i < 4; i++) {
             drawJava(boundary[i].x, boundary[i].y, boundary[(i + 1) % 4].x, boundary[(i + 1) % 4].y, g2d, w, h); //eje x
         }
 
-        Point[] points = new Point[numberOfPoints];
-        //one line
-        points[0] = new Point(-150, -150);
-        points[1] = new Point(150, 150);
-        //second line
-        points[2] = new Point(-200, 4);
-        points[3] = new Point(200, 4);
-        //tree line
-        points[4] = new Point(4, 200);
-        points[5] = new Point(-4, -200);
+        Point[] points = new Point[4];
 
-        CohenSutherLand(points, boundary, g2d, w, h);
+        double ang;
+        int newY = 0, newX = 0;
+        g2d.setColor(Color.red);
+        for (int j = 0; j < numRombos; j++) {
+            ang = (j + 1) * angulo;
+            //calcula los nuevos puntos rotados
+            for (int i = 0; i < 4; i++) {
+                newY = (int) Math.round(R * Math.sin(Math.toRadians(ang)));
+                newX = (int) Math.round(R * Math.cos(Math.toRadians(ang)));
+                points[i] = new Point(newX, newY);
+                ang = ang + 90;
+            }
+            Point[] pair = new Point[2];
+            //Dibuja las lineas entre los nuevos puntos
+            for (int k = 0; k < 3; k++) {
+                pair[0] = points[k];
+                pair[1] = points[k + 1];
+                CohenSutherLand(pair, boundary, g2d, w, h);
+            }
+            pair[0] = points[3];
+            pair[1] = points[0];
+            CohenSutherLand(pair, boundary, g2d, w, h);
+        }
+        System.out.println("Finalizo el dibujo");
     }
 
     /**
@@ -112,70 +158,72 @@ public class Clipping extends JPanel {
      */
     private void CohenSutherLand(Point[] points, Point[] boundary, Graphics2D g2d, int w, int h) {
         boolean extraSegment = false;
-        for (int i = 0; i < points.length; i = i + 2) {
+        int i = 0;
+        int startCode = getCode(points[i], boundary);
+        int endCode = getCode(points[i + 1], boundary);
+        Point pi = new Point(points[i].x, points[i].y);
+        Point pf = new Point(points[i + 1].x, points[i + 1].y);
 
-            int startCode = getCode(points[i], boundary);
-            int endCode = getCode(points[i + 1], boundary);
-            Point pi = new Point(points[i].x, points[i].y);
-            Point pf = new Point(points[i + 1].x, points[i + 1].y);
+        while (true) {
+            if ((startCode | endCode) == 0) {
+                System.out.println("Adentro");
+                break;
+            } else if ((startCode & endCode) != 0) {
+                System.out.println("afuera");
+                break;
+            } else {
+                System.out.println("Crea un nuevo segmento");
+                int x = 0, y = 0;
+                extraSegment = true;
 
-            while (true) {
-                if ((startCode | endCode) == 0) {
-                    System.out.println("Adentro");
-                    break;
-                } else if ((startCode & endCode) != 0) {
-                    System.out.println("afuera");
-                    break;
+                int x0 = pi.x;
+                int y0 = pi.y;
+                int x1 = pf.x;
+                int y1 = pf.y;
+                int ymax = boundary[2].y;
+                int ymin = boundary[0].y;
+                int xmax = boundary[2].x;
+                int xmin = boundary[0].x;
+
+                int outCode = (startCode != 0) ? startCode : endCode;
+
+                if ((outCode & TOP) != 0) {
+                    x = x0 + (x1 - x0) * (ymax - y0) / (y1 - y0);
+                    y = ymax;
+                } else if ((outCode & BOTTOM) != 0) {
+                    x = x0 + (x1 - x0) * (ymin - y0) / (y1 - y0);
+                    y = ymin;
+                } else if ((outCode & RIGHT) != 0) {
+                    y = y0 + (y1 - y0) * (xmax - x0) / (x1 - x0);
+                    x = xmax;
+                } else if ((outCode & LEFT) != 0) {
+                    y = y0 + (y1 - y0) * (xmin - x0) / (x1 - x0);
+                    x = xmin;
+                }
+
+                if (outCode == startCode) {
+                    pi.x = x;
+                    pi.y = y;
+                    startCode = getCode(pi, boundary);
                 } else {
-                    System.out.println("Crea un nuevo segmento");
-                    int x = 0, y = 0;
-                    extraSegment = true;
-
-                    int x0 = pi.x;
-                    int y0 = pi.y;
-                    int x1 = pf.x;
-                    int y1 = pf.y;
-                    int ymax = boundary[2].y;
-                    int ymin = boundary[0].y;
-                    int xmax = boundary[2].x;
-                    int xmin = boundary[0].x;
-
-                    int outCode = (startCode != 0) ? startCode : endCode;
-
-                    if ((outCode & TOP) != 0) {
-                        x = x0 + (x1 - x0) * (ymax - y0) / (y1 - y0);
-                        y = ymax;
-                    } else if ((outCode & BOTTOM) !=  0) {
-                        x = x0 + (x1 - x0) * (ymin - y0) / (y1 - y0);
-                        y = ymin;
-                    } else if ((outCode & RIGHT) != 0) {
-                        y = y0 + (y1 - y0) * (xmax - x0) / (x1 - x0);
-                        x = xmax;
-                    } else if ((outCode & LEFT) != 0) {
-                        y = y0 + (y1 - y0) * (xmin - x0) / (x1 - x0);
-                        x = xmin;
-                    }
-
-                    if (outCode == startCode) {
-                        pi.x = x;
-                        pi.y = y;
-                        startCode = getCode(pi, boundary);
-                    } else {
-                        pf.x = x;
-                        pf.y = y;
-                        endCode = getCode(pf, boundary);
-                    }
+                    pf.x = x;
+                    pf.y = y;
+                    endCode = getCode(pf, boundary);
                 }
             }
-            
+        }
+
+        if (extraSegment) {
+            g2d.setColor(Color.red);// se encuentra afuera
+            drawJava(points[i].x, points[i].y, pi.x, pi.y, g2d, w, h);
+            g2d.setColor(Color.green);// se encuentra dentro
+            drawJava(pi.x, pi.y, pf.x, pf.y, g2d, w, h);
+            g2d.setColor(Color.red);// se encuentra auera
+            drawJava(pf.x, pf.y, points[i + 1].x, points[i + 1].y, g2d, w, h);
+            extraSegment = false;
+        } else {
             g2d.setColor(Color.red);
             drawJava(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, g2d, w, h);
-
-            if (extraSegment) {
-                g2d.setColor(Color.green);// se encuentra dentro
-                drawJava(pi.x, pi.y, pf.x, pf.y, g2d, w, h);
-                extraSegment = false;
-            }
         }
     }
 
